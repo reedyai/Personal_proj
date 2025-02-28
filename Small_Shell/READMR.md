@@ -1,5 +1,10 @@
 smallsh - A Minimal Shell Implementation
 
+Use the command below to complie the code:
+
+gcc main.c -o smallsh
+
+
 **Command Syntax**
 
     Commands follow this general structure:
