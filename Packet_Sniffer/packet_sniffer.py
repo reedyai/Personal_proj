@@ -1,4 +1,4 @@
-from scapy.all import sniff, IP, Ether, TCP, UDP, DNS
+from scapy.all import sniff, IP, Ether, TCP, UDP, DNS, send
 import scapy
 import time
 import sys
@@ -50,6 +50,8 @@ def print_packet(packet, out_stream):
         print(f"     -Source Port: {packet[TCP].sport}", file=out_stream)
         print(f"     -Destination Port: {packet[TCP].dport}", file=out_stream)
         print(f"     -Payload: {bytes(packet[TCP].payload)}", file=out_stream)
+        print(f"     -Sequence Number: {packet[TCP].seq}", file=out_stream)
+        print(f"     -Ack Number: {packet[TCP].ack}", file=out_stream)
     if packet.haslayer(UDP):
         print("UDP Layer:", file=out_stream)
         print(f"     -Source Port: {packet[UDP].sport}", file=out_stream)
@@ -58,6 +60,21 @@ def print_packet(packet, out_stream):
     if packet.haslayer(DNS):
         print("DNS Layer:", file=out_stream)
         print(f"     -Query details: {packet[DNS].qd}", file=out_stream)
+
+def tcp_rst():
+    src_ip = int(input("Enter the source IP: "))
+    dst_ip = int(input("Enter the destination IP: "))
+    src_port = int(input("Enter the source port: "))
+    dst_port = int(input("Enter the destination port: "))
+    seq_num = int(input("Enter the sequence number: "))
+    ack_num = int(input("Enter the acknowlegement number: "))
+
+
+    ip = IP(src=src_ip, dst=dst_ip)
+    tcp = TCP(sport=src_port, dport=dst_port, flags="R", seq=seq_num, ack=ack_num)
+    pkt = ip / tcp
+    send(pkt)
+    print(f"Sent TCP RST from {src_ip}:{src_port} to {dst_ip}:{dst_port}")
 
 def ip_info():
     ip = input("Enter the IP you want info from: ")
@@ -83,7 +100,7 @@ if __name__=="__main__":
     running = True
     print("Welcome to packet sniffer!")
     while running:
-        print("What do you want to do?\n 1-Start sniffing\n 2-Analyze something\n 3-quit")
+        print("What do you want to do?\n 1-Pick a tool\n 2-Analyze something\n 3-quit")
         choice = input("Enter you choice: ")
 
         if choice not in ['1', '2', '3']:
@@ -92,12 +109,16 @@ if __name__=="__main__":
             continue
 
         if choice == '1':
-            duration = int(input("Enter how long would you like to smell for in seconds (0 will run forever): "))
-            output = input("Do you want the data put into a file?[y/n]:")
-            if not isinstance(duration, int):
-                print("That's not a correct input.")
-                continue
-            smell(duration, output)
+            tool = input("Input the number of the tool you want to use\n 1-Packet Sniffer\n 2-TCP reset\nEnter you choice: ")
+            if tool == '1':
+                duration = int(input("Enter how long would you like to smell for in seconds (0 will run forever): "))
+                output = input("Do you want the data put into a file?[y/n]:")
+                if not isinstance(duration, int):
+                    print("That's not a correct input.")
+                    continue
+                smell(duration, output)
+            elif tool == '2':
+                tcp_rst()
         
         if choice == '2':
             thing = input("Input the number of the thing you want to analyze\n 1-IP\nEnter you choice: ")
