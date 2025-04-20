@@ -1,14 +1,81 @@
-from scapy.all import sniff
+from scapy.all import sniff, IP, Ether, TCP, UDP, DNS
+import scapy
 import time
+import sys
+import requests
+
+ip_info_token = "74fcdb45a1c0cb"
 
 
 def smell(durr, out):
-    start = time.time()
-    while (time.time() - start) < durr or durr == 0:
-        sniff(prn=lambda packet: packet_out(packet, out), store=0)
+    print("Sniffing...")
+    try:
+        start = time.time()
+        if durr > 0:
+            sniff(prn=lambda packet: packet_out(packet, out), store=0, timeout=durr)
+        else:
+            sniff(prn=lambda packet: packet_out(packet, out), store=0)
+    except KeyboardInterrupt:
+        print("\nSniffing interrupted by user.")
 
 def packet_out(packet, out):
-    print(packet.show())
+    
+    outputs = [sys.stdout]
+    if out == "y":
+        try:
+            f = open("Packets.txt", "a")
+            outputs.append(f)
+        except IOError:
+            print("Failed to open file for writing.")
+            return
+
+    for stream in outputs:
+        print_packet(packet, stream)
+
+    if out == "y":
+        f.close()
+
+def print_packet(packet, out_stream):
+    print("\n--- New Packet ---", file=out_stream)
+    if packet.haslayer(Ether):
+        print("Ethernet Layer:", file=out_stream)
+        print(f"     -Source MAC Address: {packet[Ether].src}", file=out_stream)
+        print(f"     -Destination MAC Address: {packet[Ether].dst}", file=out_stream)
+    if packet.haslayer(IP):
+        print("IP Layer:", file=out_stream)
+        print(f"     -Source IP Address: {packet[IP].src}", file=out_stream)
+        print(f"     -Destination IP Address: {packet[IP].dst}", file=out_stream)
+    if packet.haslayer(TCP):
+        print("TCP Layer:", file=out_stream)
+        print(f"     -Source Port: {packet[TCP].sport}", file=out_stream)
+        print(f"     -Destination Port: {packet[TCP].dport}", file=out_stream)
+        print(f"     -Payload: {bytes(packet[TCP].payload)}", file=out_stream)
+    if packet.haslayer(UDP):
+        print("UDP Layer:", file=out_stream)
+        print(f"     -Source Port: {packet[UDP].sport}", file=out_stream)
+        print(f"     -Destination Port: {packet[UDP].dport}", file=out_stream)
+        print(f"     -Payload: {bytes(packet[UDP].payload)}", file=out_stream)
+    if packet.haslayer(DNS):
+        print("DNS Layer:", file=out_stream)
+        print(f"     -Query details: {packet[DNS].qd}", file=out_stream)
+
+def ip_info():
+    ip = input("Enter the IP you want info from: ")
+    try:
+        response = requests.get(f"https://ipinfo.io/{ip}/json?token={ip_info_token}")
+        if response.status_code == 200:
+            data = response.json()
+            print("IP Information:")
+            print(f"IP: {data.get('ip')}")
+            print(f"Hostname: {data.get('hostname')}")
+            print(f"City: {data.get('city')}")
+            print(f"Region: {data.get('region')}")
+            print(f"Country: {data.get('country')}")
+            print(f"Location: {data.get('loc')}")
+            print(f"Organization: {data.get('org')}")
+    except requests.RequestException:
+        print("Error during IP info lookup. Check your internet connection or token.")
+
 
 
 
@@ -25,10 +92,16 @@ if __name__=="__main__":
             continue
 
         if choice == '1':
-            print("hi")
-            duration = input("Enter how long would you like to smell for in seconds (0 will run forever): ")
+            duration = int(input("Enter how long would you like to smell for in seconds (0 will run forever): "))
             output = input("Do you want the data put into a file?[y/n]:")
             if not isinstance(duration, int):
                 print("That's not a correct input.")
                 continue
             smell(duration, output)
+        
+        if choice == '2':
+            thing = input("Input the number of the thing you want to analyze\n 1-IP\n")
+            if thing == '1':
+                ip_info()
+        if choice == '3':
+            running = False
